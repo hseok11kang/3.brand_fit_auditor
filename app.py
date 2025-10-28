@@ -1,12 +1,14 @@
-# app.py — Brand Fit Auditor (v3.2)
+# app.py — Brand Fit Auditor (v3.2, sample image selectable)
 # - Macro-first brand research + Refine pass
 # - Executive Summary 표시
 # - [Notes] (회색·소형 주석)로 표기
 # - 점수 정합성 보정, 초기 CSS 오버레이 핫스팟 + 중복 제거
+# - ✅ 샘플 이미지(sample_kimchitoktok.png) 기본 제공 & 선택 포함
 # 실행: streamlit run app.py
 # 필요: pip install -U google-genai streamlit beautifulsoup4 requests
 
 import os, re, json, base64, math
+from pathlib import Path
 from typing import Optional, List, Tuple
 
 import requests
@@ -265,13 +267,13 @@ CARD_CSS = """
 <style>
 :root{--card-bg:#f8fafc;--subcard-bg:#f3f4f6;--bar-bg:#e2e8f0;--bar-fill:#2563eb;--danger:#dc2626;}
 .section-sep{border:0;border-top:1px solid #e5e7eb;margin:18px 0}
-.card{border:1px solid #e5e7eb;border-radius:14px;padding:10px;background:var(--card-bg);margin:10px 0;overflow-wrap:anywhere} /* 16px → 10px (약 2/3) */
+.card{border:1px solid #e5e7eb;border-radius:14px;padding:10px;background:var(--card-bg);margin:10px 0;overflow-wrap:anywhere}
 .subcard{border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:var(--subcard-bg);margin:10px 0}
-.card h4{margin:0 0 6px 0} /* 타이틀 상하 여백 축소 */
+.card h4{margin:0 0 6px 0}
 .meta{color:#6b7280;font-size:12px}
 .note-muted{font-size:12px;color:#6b7280;margin:6px 0 10px 0}
 .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;color:#fff}
-.badge.big{padding:6px 14px;font-size:15px;font-weight:800;} /* Verdict 캡슐 확대 */
+.badge.big{padding:6px 14px;font-size:15px;font-weight:800;}
 .badge.gray{background:#9ca3af;color:#fff}
 .meta-badges{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0}
 .tag{display:inline-block;background:#e5e7eb;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:#374151}
@@ -421,7 +423,7 @@ def _merge(a: dict, b: dict) -> dict:
     out = dict(a)
     if not out.get("label") and b.get("label"): out["label"] = b["label"]
     out["risks"] = [*{*(out.get("risks") or []), *(b.get("risks") or [])}]
-    out["suggested_edits"] = [*{*(out.get("suggested_edits") or []), *(b.get("suggested_edits") or [])}]
+    out["suggested_edits"] = [*{*(out.get("suggested_edits") or [])}, *(b.get("suggested_edits") or [])]
     return out
 
 def dedupe_hotspots(hotspots: list) -> list:
@@ -474,7 +476,69 @@ copy_txt = st.text_area(
     placeholder="카피/캡션/해시태그",
     height=120
 )
-imgs = st.file_uploader("마케팅/광고에 사용할 소재 이미지를 최대 3장까지 업로드 해주세요.", type=["png","jpg","jpeg","webp"], accept_multiple_files=True)
+
+# ========= ✅ 샘플 이미지 기본 제공(경로 탐색 강화) =========
+def find_sample_file() -> Optional[Path]:
+    """
+    sample_kimchitoktok.png / .PNG 를 아래 경로에서 순서대로 탐색:
+    1) app.py 폴더, 2) 현재 작업 디렉토리, 3) ./image 폴더
+    """
+    names = ["sample_kimchitoktok.png", "sample_kimchitoktok.PNG"]
+    candidates: List[Path] = []
+
+    try:
+        here = Path(__file__).resolve().parent
+        candidates += [here / n for n in names]
+        candidates += [here / "image" / n for n in names]
+    except Exception:
+        pass
+
+    cwd = Path(os.getcwd())
+    candidates += [cwd / n for n in names]
+    candidates += [cwd / "image" / n for n in names]
+
+    for p in candidates:
+        if p.is_file():
+            return p
+    return None
+
+sample_file = find_sample_file()
+use_sample = False
+
+if sample_file:
+    with st.container():
+        st.markdown("**예시 이미지 사용(선택 사항)**")
+        cols_s = st.columns([1, 2])
+        with cols_s[0]:
+            try:
+                b = sample_file.read_bytes()
+                b64 = base64.b64encode(b).decode("utf-8")
+                st.image(f"data:image/png;base64,{b64}",
+                         caption=str(sample_file.name),
+                         use_container_width=True)
+            except Exception:
+                st.info("샘플 이미지 미리보기를 로드하지 못했습니다.")
+        with cols_s[1]:
+            use_sample = st.checkbox(
+                "샘플 이미지를 분석에 포함하기",
+                value=True,
+                help=f"경로: {sample_file}"
+            )
+else:
+    st.caption(
+        "※ 샘플 이미지가 보이지 않나요? 아래 경로 중 하나에 "
+        "`sample_kimchitoktok.png` 파일을 두세요.\n"
+        f"- app.py와 같은 폴더\n"
+        f"- 현재 작업 디렉토리: {os.getcwd()}\n"
+        f"- 위 경로의 `image/` 폴더 내부"
+    )
+# =========================================================
+
+imgs = st.file_uploader(
+    "마케팅/광고에 사용할 소재 이미지를 최대 3장까지 업로드 해주세요.",
+    type=["png","jpg","jpeg","webp"],
+    accept_multiple_files=True
+)
 
 # (요청) 버튼 문구 변경
 go = st.button("분석 시작", type="primary")
@@ -485,7 +549,7 @@ go = st.button("분석 시작", type="primary")
 if go:
     if not brand:
         st.warning("브랜드명을 입력하세요."); st.stop()
-    if not copy_txt and not imgs:
+    if not copy_txt and not imgs and not (use_sample and sample_file and sample_file.is_file()):
         st.warning("텍스트 또는 이미지를 최소 1개 이상 제공하세요."); st.stop()
 
     # Evidence 수집
@@ -567,11 +631,25 @@ if go:
 
     # 이미지 준비
     image_parts, data_uris = [], []
+
+    # ✅ 샘플 이미지 우선 포함 (최대 3장 제한 안에서)
+    if use_sample and sample_file and sample_file.is_file():
+        try:
+            sb = sample_file.read_bytes()
+            image_parts.append(types.Part.from_bytes(data=sb, mime_type="image/png"))
+            data_uris.append("data:image/png;base64," + base64.b64encode(sb).decode("utf-8"))
+        except Exception:
+            st.info("샘플 이미지를 불러오지 못했습니다.")
+
+    # 업로드 이미지 포함 (총 3장 제한)
     if imgs:
-        for up in imgs[:3]:
+        for up in imgs:
+            if len(image_parts) >= 3:
+                break
             p = to_image_part(up)
-            if p: image_parts.append(p)
-            data_uris.append(uploaded_to_data_uri(up))
+            if p:
+                image_parts.append(p)
+                data_uris.append(uploaded_to_data_uri(up))
 
     # ② 적합성 평가
     with st.spinner("AI가 브랜드 적합성을 평가 중..."):
