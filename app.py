@@ -265,12 +265,13 @@ CARD_CSS = """
 <style>
 :root{--card-bg:#f8fafc;--subcard-bg:#f3f4f6;--bar-bg:#e2e8f0;--bar-fill:#2563eb;--danger:#dc2626;}
 .section-sep{border:0;border-top:1px solid #e5e7eb;margin:18px 0}
-.card{border:1px solid #e5e7eb;border-radius:14px;padding:16px;background:var(--card-bg);margin:10px 0;overflow-wrap:anywhere}
-.subcard{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:var(--subcard-bg);margin:10px 0}
-.card h4{margin:0 0 10px 0}
+.card{border:1px solid #e5e7eb;border-radius:14px;padding:10px;background:var(--card-bg);margin:10px 0;overflow-wrap:anywhere} /* 16px → 10px (약 2/3) */
+.subcard{border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:var(--subcard-bg);margin:10px 0}
+.card h4{margin:0 0 6px 0} /* 타이틀 상하 여백 축소 */
 .meta{color:#6b7280;font-size:12px}
 .note-muted{font-size:12px;color:#6b7280;margin:6px 0 10px 0}
 .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;color:#fff}
+.badge.big{padding:6px 14px;font-size:15px;font-weight:800;} /* Verdict 캡슐 확대 */
 .badge.gray{background:#9ca3af;color:#fff}
 .meta-badges{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0}
 .tag{display:inline-block;background:#e5e7eb;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:#374151}
@@ -459,16 +460,24 @@ with st.expander("도움말", expanded=False):
         "🤦‍♀️ 여러 마케팅 산출물을 일관성 있게 품질관리하는 데 어려움을 겪는 브랜드 매니저/거버넌스 담당자!\n"
     )
 
-model = st.selectbox("모델", ["gemini-2.5-flash", "gemini-2.5-flash-lite"], index=0)
+# (요청) 모델 선택 UI 삭제 → 내부 고정값 사용
+model = "gemini-2.5-flash"
 
-brand = st.text_input("1) 내 브랜드명", placeholder="예: LG, Samsung, Nike ...")
-urls  = st.text_input("브랜드 참고 URL (최대 3개, 쉼표로 구분)", placeholder="예: https://www.lge.co.kr, https://www.instagram.com/lg ...")
+# (요청) 기본값 설정
+brand = st.text_input("1) 내 브랜드명", value="LG", placeholder="예: LG, Samsung, Nike ...")
+urls  = st.text_input("브랜드 참고 URL (최대 3개, 쉼표로 구분)", value="https://www.lge.co.kr/home", placeholder="예: https://www.lge.co.kr, https://www.instagram.com/lg ...")
 st.caption("브랜드 공식 홈페이지 또는 브랜드의 Identity를 잘 보여줄 수 있는 웹페이지의 URL을 입력해주세요.")
 
-copy_txt = st.text_area("마케팅/광고에 사용할 카피라이팅 및 캡션을 입력해주세요", placeholder="카피/캡션/해시태그", height=120)
+copy_txt = st.text_area(
+    "마케팅/광고에 사용할 카피라이팅 및 캡션을 입력해주세요",
+    value="김치톡톡 지금 사야 제맛. 김치톡톡 런칭 혜택전. 미색 생활을 완성하는 남다른 보관 방법!",
+    placeholder="카피/캡션/해시태그",
+    height=120
+)
 imgs = st.file_uploader("마케팅/광고에 사용할 소재 이미지를 최대 3장까지 업로드 해주세요.", type=["png","jpg","jpeg","webp"], accept_multiple_files=True)
 
-go = st.button("3) 브랜드 적합성 여부 확인", type="primary")
+# (요청) 버튼 문구 변경
+go = st.button("분석 시작", type="primary")
 
 # ===============================
 # 7) Run
@@ -580,7 +589,7 @@ if go:
     verdict = fit_json.get("verdict") or "—"
     st.write(
         f"<span class='score-text'>**Overall Score: {overall}/100**</span> "
-        f"<span class='badge' style='background:{score_to_hsl(overall)}'>{esc(verdict)}</span>",
+        f"<span class='badge big' style='background:{score_to_hsl(overall)}'>{esc(verdict)}</span>",
         unsafe_allow_html=True
     )
     if fit_json.get("reasoning_notes"):
