@@ -170,92 +170,17 @@ def guess_brand_sources(brand: str, already: List[str]) -> List[str]:
 # ===============================
 BRAND_RESEARCH_PROMPT = """
 당신은 시니어 브랜드 스트래티지스트다.
-
-목표: 입력된 여러 출처(공식 사이트/회사 소개/보도자료/위키/공식 소셜 등)를 근거 삼아
-브랜드를 **지나치게 미시적(특정 메뉴/프로모션/캠페인)** 으로 정의하지 말고
-**상위 레벨(기업/마스터브랜드) 관점에서** 요약하라.
-
-매크로 우선 원칙 (반드시 준수):
-- 우선순위: 업(Industry) → 카테고리/핵심 제공가치 → 포지셔닝/차별점 → 주요 고객군/지역 → 시각/톤 특성.
-- 개별 SKU·메뉴·한시적 캠페인은 ‘예시’로만 언급하고, notable_programs_or_subbrands에만 나열한다.
-- “브랜드를 한 줄로 정의”할 때 특정 메뉴명이 주어가 되지 않도록 한다.
-- 하나의 소스에 과적합되지 말고, 여러 출처의 공통분모를 우선 채택한다.
-
-아래 **JSON만** 반환한다(필드 유지, 필요시 일부는 빈 문자열/배열 허용):
-
-{
-  "brand": "<브랜드명>",
-  "category": "<상위 업/카테고리 예: 글로벌 패스트푸드 프랜차이즈, 스포츠웨어, 소비자가전 등>",
-  "brand_scope": "corporate|masterbrand|product_line",
-  "granularity": "macro|meso|micro",
-  "executive_summary": "상위 관점 3~5문장 요약(업/규모/핵심가치/차별점/대표 제공물)",
-  "primary_offerings": ["제품/서비스 대분류(예: '패스트푸드', '스마트폰', '스포츠웨어' 등)", ""],
-  "brand_identity": {
-    "positioning": "",
-    "values": ["", ""],
-    "tone_voice": ["", ""],
-    "visual_cues": ["colors / imagery style / logo rules 등 상위 표현"]
-  },
-  "target_audience": ["", ""],
-  "market_perception": {
-    "top_keywords": ["", ""],
-    "explanation": "소비자/미디어 관점의 상위 인식(지엽적 메뉴명 중심 금지)",
-    "notes": ""
-  },
-  "notable_programs_or_subbrands": ["(있다면) 하위 프로그램/서브브랜드 3개 이내"],
-  "evidence_notes": "가장 신뢰도 높은 출처에 기반한 근거 요약 2~4문장",
-  "confidence": 0.0
-}
-
-출력 규칙:
-- granularity는 원칙적으로 "macro"여야 한다(기업/마스터브랜드 관점).
-- primary_offerings/keywords에는 특정 SKU/메뉴명을 쓰지 말고 ‘범주’로 작성.
-- notable_programs_or_subbrands에만 개별 프로그램/메뉴/캠페인을 넣는다.
+...
 """
 
 REFINE_BRAND_RESEARCH_PROMPT = """
 아래 초기 결과가 지나치게 미시적이므로, 같은 증거를 사용하되
-**기업/마스터브랜드 관점의 'macro' 수준**으로 다시 요약해라.
-JSON 스키마와 규칙은 기존 BRAND_RESEARCH_PROMPT와 동일하며,
-반드시 granularity="macro"로 설정한다. SKU/단일 메뉴명 중심 서술 금지.
-
-[초기 응답 JSON]을 참고하되, notable_programs_or_subbrands 필드로만
-개별 프로그램/메뉴를 분리해 명시하고 본문 요약과 category/primary_offerings에는
-상위 범주만 사용하라.
-
-반환은 JSON만.
+...
 """
 
 FIT_EVAL_PROMPT = """
 당신은 Brand Guardianship 심사위원이다.
-중요 규칙:
-- dim.score는 0~100 정수.
-- overall_score = round(mean([세 dim score]))
-- verdict:
-  80~100: "Strong fit"
-  60~79 : "Good fit"
-  40~59 : "Borderline"
-  0~39  : "Misaligned"
-JSON ONLY:
-{
-  "overall_score": 0, "verdict": "",
-  "dimensions": [
-    {"name":"Tone & Voice","score":0,"rationale":""},
-    {"name":"Visual Identity","score":0,"rationale":""},
-    {"name":"Brand-Product Relevance","score":0,"rationale":""}
-  ],
-  "copy_suggestions":[{"before":"","after":"","reason":""}],
-  "cta_proposals":[{"cta":"","expected_effect":""}],
-  "image_feedback":[
-    {"index":1,"notes":"","risks":[""],"suggested_edits":[""],
-     "hotspots":[
-       {"shape":"circle","cx":0.72,"cy":0.40,"r":0.08,"label":"","risks":[""],"suggested_edits":[""]},
-       {"shape":"rect","x":0.10,"y":0.25,"w":0.18,"h":0.10,"label":"","risks":[""],"suggested_edits":[""]}
-     ]}
-  ],
-  "reasoning_notes":""
-}
-좌표: 0~1 정규화. label/risks/edits에는 번호 문자 넣지 마라(숫자 표시는 UI가 처리).
+...
 """
 
 # ===============================
@@ -265,12 +190,13 @@ CARD_CSS = """
 <style>
 :root{--card-bg:#f8fafc;--subcard-bg:#f3f4f6;--bar-bg:#e2e8f0;--bar-fill:#2563eb;--danger:#dc2626;}
 .section-sep{border:0;border-top:1px solid #e5e7eb;margin:18px 0}
-.card{border:1px solid #e5e7eb;border-radius:14px;padding:16px;background:var(--card-bg);margin:10px 0;overflow-wrap:anywhere}
-.subcard{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:var(--subcard-bg);margin:10px 0}
-.card h4{margin:0 0 10px 0}
+.card{border:1px solid #e5e7eb;border-radius:14px;padding:10px;background:var(--card-bg);margin:10px 0;overflow-wrap:anywhere} /* padding 16px → 10px (약 2/3) */
+.subcard{border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:var(--subcard-bg);margin:10px 0}
+.card h4{margin:0 0 6px 0} /* 타이틀 영역 여백 축소 */
 .meta{color:#6b7280;font-size:12px}
 .note-muted{font-size:12px;color:#6b7280;margin:6px 0 10px 0}
 .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;color:#fff}
+.badge.big{padding:6px 14px;font-size:15px;font-weight:800;} /* Verdict 캡슐만 확대 */
 .badge.gray{background:#9ca3af;color:#fff}
 .meta-badges{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px 0}
 .tag{display:inline-block;background:#e5e7eb;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:#374151}
@@ -407,7 +333,7 @@ def _area(b):
     return max(0.0, b[2]-b[0]) * max(0.0, b[3]-b[1])
 
 def _iou(b1,b2):
-    ix1=max(b1[0],b2[0]); iy1=max(b1[1],b2[1]); ix2=min(b1[2],b2[2]); iy2=min(b1[3],b2[3])
+    ix1=max(b1[0],b2[0]); iy1=max(b1[1],b2[1]); ix2=min(b1[2],b2[2]); iy2=min(b1[3],b2[1])
     iw=max(0.0, ix2-ix1); ih=max(0.0, iy2-iy1)
     inter=iw*ih; union=_area(b1)+_area(b2)-inter
     return inter/union if union>0 else 0.0
@@ -459,16 +385,23 @@ with st.expander("도움말", expanded=False):
         "🤦‍♀️ 여러 마케팅 산출물을 일관성 있게 품질관리하는 데 어려움을 겪는 브랜드 매니저/거버넌스 담당자!\n"
     )
 
-model = st.selectbox("모델", ["gemini-2.5-flash", "gemini-2.5-flash-lite"], index=0)
+# (요청) 모델 선택 옵션 삭제 → 내부 고정값
+model = "gemini-2.5-flash"
 
-brand = st.text_input("1) 내 브랜드명", placeholder="예: LG, Samsung, Nike ...")
-urls  = st.text_input("브랜드 참고 URL (최대 3개, 쉼표로 구분)", placeholder="예: https://www.lge.co.kr, https://www.instagram.com/lg ...")
+brand = st.text_input("1) 내 브랜드명", value="LG", placeholder="예: LG, Samsung, Nike ...")
+urls  = st.text_input("브랜드 참고 URL (최대 3개, 쉼표로 구분)", value="https://www.lge.co.kr/home", placeholder="예: https://www.lge.co.kr, https://www.instagram.com/lg ...")
 st.caption("브랜드 공식 홈페이지 또는 브랜드의 Identity를 잘 보여줄 수 있는 웹페이지의 URL을 입력해주세요.")
 
-copy_txt = st.text_area("마케팅/광고에 사용할 카피라이팅 및 캡션을 입력해주세요", placeholder="카피/캡션/해시태그", height=120)
+copy_txt = st.text_area(
+    "마케팅/광고에 사용할 카피라이팅 및 캡션을 입력해주세요",
+    value="김치톡톡 지금 사야 제맛. 김치톡톡 런칭 혜택전. 미색 생활을 완성하는 남다른 보관 방법!",
+    placeholder="카피/캡션/해시태그",
+    height=120
+)
 imgs = st.file_uploader("마케팅/광고에 사용할 소재 이미지를 최대 3장까지 업로드 해주세요.", type=["png","jpg","jpeg","webp"], accept_multiple_files=True)
 
-go = st.button("3) 브랜드 적합성 여부 확인", type="primary")
+# (요청) 버튼 문구 변경
+go = st.button("분석 시작", type="primary")
 
 # ===============================
 # 7) Run
@@ -580,7 +513,7 @@ if go:
     verdict = fit_json.get("verdict") or "—"
     st.write(
         f"<span class='score-text'>**Overall Score: {overall}/100**</span> "
-        f"<span class='badge' style='background:{score_to_hsl(overall)}'>{esc(verdict)}</span>",
+        f"<span class='badge big' style='background:{score_to_hsl(overall)}'>{esc(verdict)}</span>",
         unsafe_allow_html=True
     )
     if fit_json.get("reasoning_notes"):
